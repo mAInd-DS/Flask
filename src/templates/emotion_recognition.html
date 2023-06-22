@@ -1,0 +1,21 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>표정 인식</title>
+</head>
+<body>
+    <table>
+        <tr>
+            <th>Emotion</th>
+            <th>Ratio</th>
+        </tr>
+        {% for emotion, ratio in emotion_values.items() %}
+        <tr>
+            <td>{{ emotion }}</td>
+            <td>{{ ratio }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <a href="http://localhost:5000/">메인으로</a>
+</body>
+</html>

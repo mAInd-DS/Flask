@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>음성 인식 결과</title>
+</head>
+<body>
+  <h1>음성 인식 결과</h1>
+  {% if dialogue_save[0] and dialogue_save[1] %}
+    <table>
+      <tr>
+        <th>화자</th>
+        <th>내용</th>
+      </tr>
+      {% for i in range(dialogue_save[0]|length) %}
+        <tr>
+          <td>{{ dialogue_save[0][i] }}</td>
+          <td>{{ dialogue_save[1][i] }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p>대화 정보가 없습니다.</p>
+  {% endif %}
+
+  <form method="post" action="/show_transcribe">
+    <button type="submit">대화 정보 다시 불러오기</button>
+  </form>
+</body>
+</html>

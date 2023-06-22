@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>음성 인식</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script>
+    $(document).ready(function() {
+      // 버튼 클릭 이벤트 처리
+      $('#transcribeBtn').click(function() {
+        $.ajax({
+          url: '/do_transcribe',
+          type: 'POST',
+          success: function(response) {
+            alert(response);  // 응답 메시지를 알림으로 표시하거나 다른 동작을 수행
+          },
+          error: function(error) {
+            alert('음성 인식에 실패했습니다.');  // 실패 시 알림 표시
+          }
+        });
+      });
+    });
+  </script>
+</head>
+<body>
+  <h1>음성 인식</h1>
+  <button id="transcribeBtn">음성 인식 시작</button>
+  <br><br>
+  <a href="http://localhost:5000/">메인으로</a>
+</body>
+</html>
