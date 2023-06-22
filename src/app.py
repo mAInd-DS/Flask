@@ -8,10 +8,8 @@ from werkzeug.utils import secure_filename
 import cv2
 import numpy as np
 from keras.models import model_from_json
-from keras.preprocessing import image
 from keras.utils.image_utils import img_to_array
 import show_result, amazon_transcribe
-from dotenv import load_dotenv
 import os
 
 # Flask 객체 인스턴스 생성
@@ -60,14 +58,23 @@ def file_upload():
                 aws_access_key_id = aws_access_key_id,
                 aws_secret_access_key = aws_secret_access_key
             )
-            s3.upload_fileobj(file,aws_bucket_name, filename)
+            s3.upload_fileobj(file, aws_bucket_name, filename)
             global s3_bucket_path
             s3_bucket_path = f"s3://{aws_bucket_name}/{filename}"
-            return "파일이 S3 버킷에 저장되었습니다"
+            response_data = {
+                'message': '파일이 S3 버킷에 저장되었습니다'
+            }
+            return json.dumps(response_data), 200, {'Content-Type': 'application/json'}
         except NoCredentialsError:
-            return "AWS 자격 증명 정보가 유효하지 않습니다"
+            response_data = {
+                'message': 'AWS 자격 증명 정보가 유효하지 않습니다'
+            }
+            return json.dumps(response_data), 500, {'Content-Type': 'application/json'}
         except Exception as e:
-            return str(e)
+            response_data = {
+                'message': str(e)
+            }
+            return json.dumps(response_data), 500, {'Content-Type': 'application/json'}
     else:
         return render_template('file_upload.html')
 
@@ -165,7 +172,6 @@ def emotion_recognition():
 
     else:
         return render_template('emotion_recognition.html', emotion_values={})
-
 
 
 if __name__ == "__main__":

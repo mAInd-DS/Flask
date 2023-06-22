@@ -1,6 +1,4 @@
 import boto3
-import json
-import re
 
 def get_json_from_s3(transcribe_json_name, aws_access_key, aws_secret_key, region_name, bucket_name):
     # S3 클라이언트 생성
