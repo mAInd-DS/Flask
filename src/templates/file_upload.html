@@ -33,6 +33,7 @@
       border-radius: 4px;
     }
   </style>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script>
     function showSelectedFileName() {
       var fileInput = document.getElementById("file-upload");
@@ -73,7 +74,7 @@
       <span id="file-label">파일 선택</span>
     </label>
     <input type="file" id="file-upload" class="custom-file-input" name="file" onchange="showSelectedFileName()" />
-    <input type="submit" class="custom-file-label" value="업로드" />
+    <input type="submit" class="button" value="업로드" />
   </form>
   <br><br>
   <a class="button" href="http://localhost:5000/">메인으로</a>

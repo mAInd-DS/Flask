@@ -2,6 +2,7 @@
 
 import json
 import boto3
+import requests
 from botocore.exceptions import NoCredentialsError
 from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename
@@ -26,6 +27,7 @@ aws_bucket_name = os.environ.get("aws_bucket_name")
 s3_bucket_path = ''
 transcribe_json_name = ''
 detected_start_times = []
+dialogue_save = [[],[]]
 
 # Loading JSON model
 json_file = open('top_models/fer.json', 'r')
@@ -97,20 +99,45 @@ def show_transcribe():
     global detected_start_times
     global s3_bucket_path
     global transcribe_json_name
+    global dialogue_save
 
     if request.method == 'POST':
         if s3_bucket_path == "":
             return "파일을 업로드해주세요"
         if transcribe_json_name == "":
             return "파일을 업로드 해주세요"
+
         result_json_file = show_result.get_json_from_s3(transcribe_json_name, aws_access_key_id, aws_secret_access_key, aws_region_name, aws_bucket_name)
         json_content = json.load(result_json_file)
         detected_start_times, dialogue_save = show_result.extract_dialogue(json_content)
+
+        url = 'http://127.0.0.1:5002/receive_transcribe'
+        headers = {'Content-Type': 'application/json'}
+        response = requests.post(url, headers=headers, json=dialogue_save)
+        if response.status_code == 200:
+            print('transcribe 전송 성공')
+        else:
+            print('transcribe 전송 실패')
+
         return render_template('show_transcribe.html', dialogue_save=dialogue_save)
     else:
         # 'dialogue_save' 변수를 빈 리스트로 초기화하여 반환
         dialogue_save = ([], [])
         return render_template('show_transcribe.html', dialogue_save=dialogue_save)
+
+@app.route('/send_transcribe', methods=['GET', 'POST'])
+def send_transcribe():
+    global dialogue_save
+    if request.method == 'POST':
+        # 다른 Flask 서버로 배열 전송 (가정)
+        url = 'http://127.0.0.1:5002/receive_transcribe'
+        headers = {'Content-Type': 'application/json'}
+        payload = json.dumps(dialogue_save)
+        response = requests.post(url, headers=headers, data=payload)
+        if response.status_code == 200:
+            print('transcribe 전송 성공')
+        else:
+            print('transcribe 전송 실패')
 
 
 def perform_emotion_recognition(video_path):
