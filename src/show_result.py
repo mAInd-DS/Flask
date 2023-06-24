@@ -21,6 +21,7 @@ def extract_dialogue(json_content):
     dialogue = []
     detected_start_times = []  # 감지된 start time을 저장할 리스트
     dialogue_save = [[],[]]
+    speaker_content = []
 
     for segment in segments:
         content_list = []
@@ -48,6 +49,7 @@ def extract_dialogue(json_content):
         print(f'{speaker}: {content}')
         dialogue_save[0].append(speaker)  # 첫 번째 하위 배열에 발화자 저장
         dialogue_save[1].append(content)  # 두 번째 하위 배열에 내용 저장
+        speaker_content.append([speaker, content])
 
         for target_word in target_words:
             if target_word in content:
@@ -55,4 +57,4 @@ def extract_dialogue(json_content):
                 detected_start_times.append(start_time)  # 감지된 시작 시간을 리스트에 추가
 
     print(dialogue_save)
-    return detected_start_times, dialogue_save  # 감지된 start time 리스트 반환
+    return detected_start_times, dialogue_save, speaker_content  # 감지된 start time 리스트 반환

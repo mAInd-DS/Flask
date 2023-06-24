@@ -31,6 +31,7 @@ transcribe_json_name = ''
 detected_start_times = []
 dialogue_save = [[],[]]
 emotion_values = {}
+speaker_content = []
 
 @app.route('/')
 def index():
@@ -90,6 +91,7 @@ def show_transcribe():
     global s3_bucket_path
     global transcribe_json_name
     global dialogue_save
+    global speaker_content
 
     if request.method == 'POST':
         if s3_bucket_path == "":
@@ -99,7 +101,7 @@ def show_transcribe():
 
         result_json_file = show_result.get_json_from_s3(transcribe_json_name, aws_access_key_id, aws_secret_access_key, aws_region_name, aws_bucket_name)
         json_content = json.load(result_json_file)
-        detected_start_times, dialogue_save = show_result.extract_dialogue(json_content)
+        detected_start_times, dialogue_save, speaker_content = show_result.extract_dialogue(json_content)
 
         url = 'http://127.0.0.1:5000/receive_transcribe'
         headers = {'Content-Type': 'application/json'}
@@ -108,11 +110,8 @@ def show_transcribe():
             print('transcribe 전송 성공')
         else:
             print('transcribe 전송 실패')
-        speakers_array = [item for item in dialogue_save[0]]
-        sentences_array = [item for item in dialogue_save[1]]
-        print(speakers_array)
-        print(sentences_array)
         print(dialogue_save)
+        print(speaker_content)
         return render_template('show_transcribe.html', dialogue_save=dialogue_save)
     else:
         # 'dialogue_save' 변수를 빈 리스트로 초기화하여 반환
