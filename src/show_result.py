@@ -17,7 +17,7 @@ def get_json_from_s3(transcribe_json_name, aws_access_key, aws_secret_key, regio
     return json_file
 
 def extract_dialogue(json_content):
-    target_words = ["지난주에는 어떻게", "오늘 상담을 마치"]
+    target_words = ["지난주는 어떻게", "오늘 상담을 마치"]
     segments = json_content['results']['speaker_labels']['segments']
     items = json_content['results']['items']
     dialogue = []

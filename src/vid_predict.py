@@ -36,7 +36,7 @@ while True:
 
     # Define the specific time interval for emotion recognition (e.g., 5 seconds to 1 minute 30 seconds)
     start_time = 5
-    end_time = 1 * 60 + 30
+    end_time = 15
 
     if start_time <= current_time <= end_time:
         gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)

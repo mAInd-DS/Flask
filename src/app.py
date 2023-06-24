@@ -5,12 +5,7 @@ import boto3
 from botocore.exceptions import NoCredentialsError
 from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename
-import cv2
-import numpy as np
-from keras.models import model_from_json
-from keras.preprocessing import image
-from keras.utils.image_utils import img_to_array
-import show_result, amazon_transcribe
+import show_result, amazon_transcribe, perform_emotion_recognition
 from dotenv import load_dotenv
 import os
 
@@ -28,18 +23,6 @@ aws_bucket_name = os.environ.get("aws_bucket_name")
 s3_bucket_path = ''
 transcribe_json_name = ''
 detected_start_times = []
-
-# Loading JSON model
-json_file = open('top_models/fer.json', 'r')
-loaded_model_json = json_file.read()
-json_file.close()
-model = model_from_json(loaded_model_json)
-
-# Loading weights
-model.load_weights('top_models/fer.h5')
-
-face_haar_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-
 
 @app.route('/')
 def index():
@@ -106,66 +89,28 @@ def show_transcribe():
         return render_template('show_transcribe.html', dialogue_save=dialogue_save)
 
 
-def perform_emotion_recognition(video_path):
-    cap = cv2.VideoCapture(video_path)
-
-    total_emotion_values = np.zeros(8)  # Initialize an array to store total emotion values
-
-    while True:
-        ret, img = cap.read()
-        if not ret:
-            break
-
-        gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-        faces_detected = face_haar_cascade.detectMultiScale(gray_img, 1.2, 6)
-
-        for (x, y, w, h) in faces_detected:
-            roi_gray = gray_img[y:y + w, x:x + h]
-            roi_gray = cv2.resize(roi_gray, (48, 48))
-            img_pixels = img_to_array(roi_gray)
-            img_pixels = np.expand_dims(img_pixels, axis=0)
-            img_pixels /= 255.0
-
-            predictions = model.predict(img_pixels)
-            max_index = int(np.argmax(predictions[0]))
-
-            total_emotion_values += predictions[0]  # Accumulate the emotion values
-
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
-
-    # Calculate the sum of total emotion values
-    total_sum = np.sum(total_emotion_values)
-
-    # Calculate the emotion ratios
-    emotion_ratios = total_emotion_values / total_sum
-
-    # Create a dictionary of emotion values
-    emotion_values = {}
-    emotions = ['neutral', 'happiness', 'surprise', 'sadness', 'anger', 'disgust', 'fear', 'contempt']
-    for emotion, ratio in zip(emotions, emotion_ratios):
-        emotion_values[emotion] = ratio
-
-    return emotion_values
-
-
 @app.route('/emotion_recognition', methods=['GET', 'POST'])
 def emotion_recognition():
     if request.method == 'POST':
         global s3_bucket_path
         if s3_bucket_path == "":
             return "파일을 업로드해주세요"
+        
+        s3_key = s3_bucket_path.split('/')[-1]  # 추출된 S3 키
+        local_file_path = 'video.mp4'
 
-        emotion_values = perform_emotion_recognition(s3_bucket_path)
+        perform_emotion_recognition.download_file_from_s3(aws_bucket_name, s3_key, local_file_path, aws_access_key_id, aws_secret_access_key)
+
+        emotion_values = perform_emotion_recognition.perform_emotion_recognition(local_file_path, detected_start_times)
         return render_template('emotion_recognition.html', emotion_values=emotion_values)
-
     else:
         return render_template('emotion_recognition.html', emotion_values={})
 
+
+@app.route('/users')
+def users():
+    return {"members": [{ "id" : 1, "name" : "eunsoo" },
+    					{ "id" : 2, "name" : "hi" }]}
 
 
 if __name__ == "__main__":

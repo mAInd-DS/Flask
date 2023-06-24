@@ -4,16 +4,22 @@
     <title>표정 인식</title>
 </head>
 <body>
+    <form action="/emotion_recognition" method="post">
+        <input type="submit" value="표정인식진행">
+    </form>
     <table>
+        
+        {% for start_time, emotions in emotion_values.items() %}
         <tr>
             <th>Emotion</th>
             <th>Ratio</th>
         </tr>
-        {% for emotion, ratio in emotion_values.items() %}
-        <tr>
-            <td>{{ emotion }}</td>
-            <td>{{ ratio }}</td>
-        </tr>
+            {% for emotion, ratio in emotions.items() %}
+            <tr>
+                <td>{{ emotion }}</td>
+                <td>{{ '%.2f%%' % ratio }}</td>
+            </tr>
+            {% endfor %}
         {% endfor %}
     </table>
     <a href="http://localhost:5000/">메인으로</a>
