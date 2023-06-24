@@ -18,10 +18,24 @@
       border: none;
       border-radius: 4px;
     }
+    .custom-file-label {
+      display: inline-block;
+      padding: 10px 20px;
+      background-color: #0067A3;
+      color: white;
+      text-align: center;
+      text-decoration: none;
+      font-size: 16px;
+      margin: 10px;
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+    }
 </style>
 <body>
+    <h1>표정 인식 결과</h1>
     <form action="/emotion_recognition" method="post">
-        <input type="submit" value="표정인식진행">
+        <button type="submit" class="custom-file-label">표정 인식 진행</button>
     </form>
     <table>
         

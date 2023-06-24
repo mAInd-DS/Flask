@@ -56,4 +56,3 @@ def extract_dialogue(json_content):
 
     print(dialogue_save)
     return detected_start_times, dialogue_save  # 감지된 start time 리스트 반환
-

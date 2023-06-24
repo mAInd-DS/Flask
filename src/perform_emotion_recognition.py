@@ -39,11 +39,11 @@ def perform_emotion_recognition(video_path, start_times):
 
     cap = cv2.VideoCapture(video_path)
 
-    emotions = ['neutral', 'happiness', 'surprise', 'sadness', 'anger', 'disgust', 'fear', 'contempt']
+    emotions = ['Áß¸³', 'Çàº¹', '³î¶÷', '½½ÇÄ', 'È­³²', 'Çø¿À', '°øÆ÷', '°æ¸ê']
     emotion_values = {}
 
     for start_time in start_times:
-        end_time = start_time + 20
+        end_time = start_time + 10
 
         total_emotion_values = np.zeros(8)  # Initialize an array to store total emotion values
         frame_count = 0

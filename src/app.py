@@ -30,6 +30,7 @@ s3_bucket_path = ''
 transcribe_json_name = ''
 detected_start_times = []
 dialogue_save = [[],[]]
+emotion_values = {}
 
 @app.route('/')
 def index():
@@ -83,7 +84,6 @@ def do_transcribe():
     else:
         return render_template('do_transcribe.html')
 
-
 @app.route('/show_transcribe', methods=['GET', 'POST'])
 def show_transcribe():
     global detected_start_times
@@ -101,57 +101,62 @@ def show_transcribe():
         json_content = json.load(result_json_file)
         detected_start_times, dialogue_save = show_result.extract_dialogue(json_content)
 
-        url = 'http://127.0.0.1:5002/receive_transcribe'
+        url = 'http://127.0.0.1:5000/receive_transcribe'
         headers = {'Content-Type': 'application/json'}
         response = requests.post(url, headers=headers, json=dialogue_save)
         if response.status_code == 200:
             print('transcribe 전송 성공')
         else:
             print('transcribe 전송 실패')
-
+        speakers_array = [item for item in dialogue_save[0]]
+        sentences_array = [item for item in dialogue_save[1]]
+        print(speakers_array)
+        print(sentences_array)
+        print(dialogue_save)
         return render_template('show_transcribe.html', dialogue_save=dialogue_save)
     else:
         # 'dialogue_save' 변수를 빈 리스트로 초기화하여 반환
         dialogue_save = ([], [])
         return render_template('show_transcribe.html', dialogue_save=dialogue_save)
 
-@app.route('/send_transcribe', methods=['GET', 'POST'])
-def send_transcribe():
-    global dialogue_save
-    if request.method == 'POST':
-        # 다른 Flask 서버로 배열 전송 (가정)
-        url = 'http://127.0.0.1:5002/receive_transcribe'
-        headers = {'Content-Type': 'application/json'}
-        payload = json.dumps(dialogue_save)
-        response = requests.post(url, headers=headers, data=payload)
-        if response.status_code == 200:
-            print('transcribe 전송 성공')
-        else:
-            print('transcribe 전송 실패')
+#
+# @app.route('/send_transcribe', methods=['GET', 'POST'])
+# def send_transcribe():
+#     global dialogue_save
+#     if request.method == 'POST':
+#         # 다른 Flask 서버로 배열 전송 (가정)
+#         url = 'http://127.0.0.1:5002/receive_transcribe'
+#         headers = {'Content-Type': 'application/json'}
+#         payload = json.dumps(dialogue_save)
+#         response = requests.post(url, headers=headers, data=payload)
+#         if response.status_code == 200:
+#             print('transcribe 전송 성공')
+#         else:
+#             print('transcribe 전송 실패')
 
 
 @app.route('/emotion_recognition', methods=['GET', 'POST'])
 def emotion_recognition():
+    global emotion_values
     if request.method == 'POST':
         global s3_bucket_path
         if s3_bucket_path == "":
             return "파일을 업로드해주세요"
-        
+
         s3_key = s3_bucket_path.split('/')[-1]  # 추출된 S3 키
         local_file_path = 'video.mp4'
 
         perform_emotion_recognition.download_file_from_s3(aws_bucket_name, s3_key, local_file_path, aws_access_key_id, aws_secret_access_key)
 
         emotion_values = perform_emotion_recognition.perform_emotion_recognition(local_file_path, detected_start_times)
+        print(emotion_values)
         return render_template('emotion_recognition.html', emotion_values=emotion_values)
     else:
         return render_template('emotion_recognition.html', emotion_values={})
 
-
-@app.route('/users')
-def users():
-    return {"members": [{ "id" : 1, "name" : "eunsoo" },
-    					{ "id" : 2, "name" : "hi" }]}
+@app.route("/convey")
+def convey():
+    return emotion_values
 
 if __name__ == "__main__":
     app.run(debug=True)
