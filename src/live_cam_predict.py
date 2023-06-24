@@ -1,8 +1,8 @@
 import cv2
 import numpy as np
 from keras.models import model_from_json
-from keras.preprocessing import image
-from tensorflow.keras.preprocessing.image import img_to_array
+from tensorflow import keras
+img_to_array = keras.preprocessing.image.img_to_array
 
 # Load model from JSON file
 json_file = open('top_models\\fer.json', 'r')

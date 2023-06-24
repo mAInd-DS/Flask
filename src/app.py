@@ -2,11 +2,17 @@
 
 import json
 import boto3
+import requests
 from botocore.exceptions import NoCredentialsError
 from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename
 import show_result, amazon_transcribe, perform_emotion_recognition
 from dotenv import load_dotenv
+import cv2
+import numpy as np
+from keras.models import model_from_json
+from keras.utils.image_utils import img_to_array
+import show_result, amazon_transcribe
 import os
 
 # Flask 객체 인스턴스 생성
@@ -23,6 +29,7 @@ aws_bucket_name = os.environ.get("aws_bucket_name")
 s3_bucket_path = ''
 transcribe_json_name = ''
 detected_start_times = []
+dialogue_save = [[],[]]
 
 @app.route('/')
 def index():
@@ -43,14 +50,23 @@ def file_upload():
                 aws_access_key_id = aws_access_key_id,
                 aws_secret_access_key = aws_secret_access_key
             )
-            s3.upload_fileobj(file,aws_bucket_name, filename)
+            s3.upload_fileobj(file, aws_bucket_name, filename)
             global s3_bucket_path
             s3_bucket_path = f"s3://{aws_bucket_name}/{filename}"
-            return "파일이 S3 버킷에 저장되었습니다"
+            response_data = {
+                'message': '파일이 S3 버킷에 저장되었습니다'
+            }
+            return json.dumps(response_data), 200, {'Content-Type': 'application/json'}
         except NoCredentialsError:
-            return "AWS 자격 증명 정보가 유효하지 않습니다"
+            response_data = {
+                'message': 'AWS 자격 증명 정보가 유효하지 않습니다'
+            }
+            return json.dumps(response_data), 500, {'Content-Type': 'application/json'}
         except Exception as e:
-            return str(e)
+            response_data = {
+                'message': str(e)
+            }
+            return json.dumps(response_data), 500, {'Content-Type': 'application/json'}
     else:
         return render_template('file_upload.html')
 
@@ -73,20 +89,45 @@ def show_transcribe():
     global detected_start_times
     global s3_bucket_path
     global transcribe_json_name
+    global dialogue_save
 
     if request.method == 'POST':
         if s3_bucket_path == "":
             return "파일을 업로드해주세요"
         if transcribe_json_name == "":
             return "파일을 업로드 해주세요"
+
         result_json_file = show_result.get_json_from_s3(transcribe_json_name, aws_access_key_id, aws_secret_access_key, aws_region_name, aws_bucket_name)
         json_content = json.load(result_json_file)
         detected_start_times, dialogue_save = show_result.extract_dialogue(json_content)
+
+        url = 'http://127.0.0.1:5002/receive_transcribe'
+        headers = {'Content-Type': 'application/json'}
+        response = requests.post(url, headers=headers, json=dialogue_save)
+        if response.status_code == 200:
+            print('transcribe 전송 성공')
+        else:
+            print('transcribe 전송 실패')
+
         return render_template('show_transcribe.html', dialogue_save=dialogue_save)
     else:
         # 'dialogue_save' 변수를 빈 리스트로 초기화하여 반환
         dialogue_save = ([], [])
         return render_template('show_transcribe.html', dialogue_save=dialogue_save)
+
+@app.route('/send_transcribe', methods=['GET', 'POST'])
+def send_transcribe():
+    global dialogue_save
+    if request.method == 'POST':
+        # 다른 Flask 서버로 배열 전송 (가정)
+        url = 'http://127.0.0.1:5002/receive_transcribe'
+        headers = {'Content-Type': 'application/json'}
+        payload = json.dumps(dialogue_save)
+        response = requests.post(url, headers=headers, data=payload)
+        if response.status_code == 200:
+            print('transcribe 전송 성공')
+        else:
+            print('transcribe 전송 실패')
 
 
 @app.route('/emotion_recognition', methods=['GET', 'POST'])
@@ -111,7 +152,6 @@ def emotion_recognition():
 def users():
     return {"members": [{ "id" : 1, "name" : "eunsoo" },
     					{ "id" : 2, "name" : "hi" }]}
-
 
 if __name__ == "__main__":
     app.run(debug=True)

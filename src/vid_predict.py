@@ -2,9 +2,8 @@ import argparse
 import cv2
 import numpy as np
 from keras.models import model_from_json
-from keras.preprocessing import image
-from tensorflow.keras.preprocessing.image import img_to_array
-import time
+from tensorflow import keras
+img_to_array = keras.preprocessing.image.img_to_array
 
 # Parse the video file path argument
 ap = argparse.ArgumentParser()

@@ -1,6 +1,4 @@
 import boto3
-import json
-import re
 
 def get_json_from_s3(transcribe_json_name, aws_access_key, aws_secret_key, region_name, bucket_name):
     # S3 클라이언트 생성
@@ -56,5 +54,6 @@ def extract_dialogue(json_content):
                 print(f"{speaker}이(가) 시작 시간 {start_time}에 '{target_word}' 단어를 감지했습니다.")
                 detected_start_times.append(start_time)  # 감지된 시작 시간을 리스트에 추가
 
+    print(dialogue_save)
     return detected_start_times, dialogue_save  # 감지된 start time 리스트 반환
 

@@ -2,6 +2,57 @@
 <html>
 <head>
   <title>음성 인식 결과</title>
+  <style>
+    .button {
+      display: inline-block;
+      padding: 10px 20px;
+      background-color: #808080;
+      color: white;
+      text-align: center;
+      text-decoration: none;
+      font-size: 16px;
+      margin: 10px;
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+    }
+    .custom-file-label {
+      display: inline-block;
+      padding: 10px 20px;
+      background-color: #0067A3;
+      color: white;
+      text-align: center;
+      text-decoration: none;
+      font-size: 16px;
+      margin: 10px;
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    th, td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+    }
+    p {
+      margin: 20px 0;
+    }
+    .speaker-spk_0 {
+      color: blue;
+    }
+    .speaker-spk_1 {
+      color: green;
+    }
+  </style>
 </head>
 <body>
   <h1>음성 인식 결과</h1>
@@ -13,7 +64,7 @@
       </tr>
       {% for i in range(dialogue_save[0]|length) %}
         <tr>
-          <td>{{ dialogue_save[0][i] }}</td>
+          <td class="speaker-{{ dialogue_save[0][i] }}">{{ dialogue_save[0][i] }}</td>
           <td>{{ dialogue_save[1][i] }}</td>
         </tr>
       {% endfor %}
@@ -23,7 +74,8 @@
   {% endif %}
 
   <form method="post" action="/show_transcribe">
-    <button type="submit">대화 정보 다시 불러오기</button>
+    <button type="submit" class="custom-file-label">대화 정보 불러오기</button>
   </form>
+  <a class="button" href="http://localhost:5000/">메인으로</a>
 </body>
 </html>
