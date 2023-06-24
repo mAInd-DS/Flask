@@ -32,6 +32,7 @@ detected_start_times = []
 dialogue_save = [[],[]]
 emotion_values = {}
 speaker_content = []
+speaker_1_dialogue = []
 
 @app.route('/')
 def index():
@@ -92,6 +93,7 @@ def show_transcribe():
     global transcribe_json_name
     global dialogue_save
     global speaker_content
+    global speaker_1_dialogue
 
     if request.method == 'POST':
         if s3_bucket_path == "":
@@ -101,11 +103,15 @@ def show_transcribe():
 
         result_json_file = show_result.get_json_from_s3(transcribe_json_name, aws_access_key_id, aws_secret_access_key, aws_region_name, aws_bucket_name)
         json_content = json.load(result_json_file)
-        detected_start_times, dialogue_save, speaker_content = show_result.extract_dialogue(json_content)
+        detected_start_times, dialogue_save, speaker_content, speaker_1_dialogue = show_result.extract_dialogue(json_content)
 
-        url = 'http://127.0.0.1:5000/receive_transcribe'
+        print(speaker_1_dialogue)
+        speakers = [item for item in dialogue_save[0]]
+        sentences = [item for item in dialogue_save[1]]
+
+        url = 'http://3.37.179.243:5000/receive_array'
         headers = {'Content-Type': 'application/json'}
-        response = requests.post(url, headers=headers, json=dialogue_save)
+        response = requests.post(url, headers=headers, json=speaker_1_dialogue)
         if response.status_code == 200:
             print('transcribe 전송 성공')
         else:
