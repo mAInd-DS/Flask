@@ -4,12 +4,10 @@ import cv2
 import numpy as np
 import boto3
 from keras.models import model_from_json
-from keras.preprocessing import image
 from keras.utils.image_utils import img_to_array
 import os
 
-aws_access_key_id = os.environ.get("aws_access_key_id")
-aws_secret_access_key = os.environ.get("aws_secret_access_key")
+# Amazon S3 정보
 aws_bucket_name = os.environ.get("aws_bucket_name")
 
 # Loading JSON model
@@ -23,10 +21,10 @@ model.load_weights('top_models/fer.h5')
 
 face_haar_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 
-def download_file_from_s3(bucket_name, s3_key, local_path, aws_access_key_id, aws_secret_access_key):
-    s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
+def download_file_from_s3(s3_key, local_path):
+    s3 = boto3.client('s3')
     try:
-        s3.download_file(bucket_name, s3_key, local_path)
+        s3.download_file(aws_bucket_name, s3_key, local_path)
         print("파일 다운로드 완료:", local_path)
     except Exception as e:
         print("파일 다운로드 실패:", str(e))

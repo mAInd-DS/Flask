@@ -1,16 +1,15 @@
 from datetime import datetime
 import time
 import boto3
+import os
 
-def transcribe_audio(aws_access_key_id, aws_secret_access_key, audio_file_uri, bucket_name):
+# Amazon S3 정보
+aws_bucket_name = os.environ.get('aws_bucket_name')
+
+def transcribe_audio(audio_file_uri):
 
     # Transcribe 클라이언트 생성
-    transcribe = boto3.client(
-        'transcribe',
-        aws_access_key_id=aws_access_key_id,
-        aws_secret_access_key=aws_secret_access_key,
-        region_name='ap-northeast-2'
-    )
+    transcribe = boto3.client('transcribe')
 
     media = {'MediaFileUri': audio_file_uri}
     settings = {
@@ -26,7 +25,7 @@ def transcribe_audio(aws_access_key_id, aws_secret_access_key, audio_file_uri, b
         Media=media,
         MediaFormat='mp4',  # 음원 파일 형식에 맞게 변경
         LanguageCode='ko-KR',
-        OutputBucketName=bucket_name,  # 결과 파일을 업로드할 버킷 이름 추가
+        OutputBucketName=aws_bucket_name,  # 결과 파일을 업로드할 버킷 이름 추가
         Settings = settings
     )
 

@@ -1,23 +1,28 @@
 import boto3
+import os
 
-def get_json_from_s3(transcribe_json_name, aws_access_key, aws_secret_key, region_name, bucket_name):
+# Amazon S3 정보
+aws_bucket_name = os.environ.get("aws_bucket_name")
+
+def get_json_from_s3(transcribe_json_name):
     # S3 클라이언트 생성
-    s3_client = boto3.client('s3', aws_access_key_id=aws_access_key, aws_secret_access_key=aws_secret_key,
-                             region_name=region_name)
+    s3_client = boto3.client('s3')
 
     object_key = transcribe_json_name + '.json'
 
     # 파일 가져오기
-    response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
+    response = s3_client.get_object(Bucket = aws_bucket_name, Key=object_key)
     json_file = response['Body']
 
     # JSON 파일 반환
     return json_file
 
+
 def extract_dialogue(json_content):
-    target_words = ["지난주는 어떻게", "오늘 상담을 마치"]
+    target_words = ["지난 주는", "오늘 상담을 마치"]
     segments = json_content['results']['speaker_labels']['segments']
     items = json_content['results']['items']
+
     dialogue = []
     detected_start_times = []  # 감지된 start time을 저장할 리스트
     dialogue_save = [[],[]]
