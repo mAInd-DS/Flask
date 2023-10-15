@@ -6,7 +6,7 @@ import os
 # Amazon S3 정보
 aws_bucket_name = os.environ.get('aws_bucket_name')
 
-def transcribe_audio(audio_file_uri):
+def transcribe(audio_file_uri):
 
     # Transcribe 클라이언트 생성
     transcribe = boto3.client('transcribe')

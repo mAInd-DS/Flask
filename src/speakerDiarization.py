@@ -1,3 +1,4 @@
+import json
 import boto3
 import os
 
@@ -18,15 +19,23 @@ def get_json_from_s3(transcribe_json_name):
     return json_file
 
 
-def extract_dialogue(json_content):
-    target_words = ["지난 주는", "오늘 상담을 마치"]
-    segments = json_content['results']['speaker_labels']['segments']
-    items = json_content['results']['items']
+def speakerDiarization(transcribe_json_name):
+    json_file = get_json_from_s3(transcribe_json_name)
+    json_content = json.load(json_file)
+
+    target_words = ["지난 주는", "오늘 상담을 마치"] # 첫&마지막 문장 탐지 단어
+    try:
+        segments = json_content['results']['speaker_labels']['segments']
+        items = json_content['results']['items']
+    except KeyError:
+        print("파일이 올바르게 변환되지 않았습니다. 다른 파일을 시도해 주세요")
+        return
 
     dialogue = []
-    detected_start_times = []  # 감지된 start time을 저장할 리스트
     dialogue_save = [[],[]]
     speaker_content = []
+
+    detected_start_times = []  # 감지된 start time 저장 리스트
     merged_array = []
 
     for segment in segments:

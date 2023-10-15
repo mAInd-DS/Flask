@@ -6,7 +6,7 @@ from botocore.exceptions import NoCredentialsError
 from flask import Flask, render_template, request
 from werkzeug.utils import secure_filename
 import perform_emotion_recognition
-import show_result, amazon_transcribe
+import speakerDiarization, transcribe
 import os
 
 # Flask 객체 인스턴스 생성
@@ -48,16 +48,20 @@ def file_upload():
             global s3_bucket_path
             s3_bucket_path = f"s3://{aws_bucket_name}/{filename}"
             print("파일이 S3 버킷에 저장되었습니다")
+            print("bucket path: ", s3_bucket_path)
             response_data = {
+                's3_bucket_path': s3_bucket_path,
                 'message': '파일이 S3 버킷에 저장되었습니다'
             }
             return json.dumps(response_data), 200, {'Content-Type': 'application/json'}
+
         except NoCredentialsError:
             print("AWS 자격 증명 정보가 유효하지 않습니다")
             response_data = {
                 'message': 'AWS 자격 증명 정보가 유효하지 않습니다'
             }
             return json.dumps(response_data), 500, {'Content-Type': 'application/json'}
+
         except Exception as e:
             response_data = {
                 'message': str(e)
@@ -71,12 +75,19 @@ def file_upload():
 @app.route('/do_transcribe', methods=['GET', 'POST'])
 def do_transcribe():
     if request.method == 'POST':
-        global s3_bucket_path
-        if s3_bucket_path == "":
+        # JSON 요청 바디에서 's3_bucket_path' 값을 추출
+        s3_bucket_path = request.json.get('s3_bucket_path')
+
+        if not s3_bucket_path:
             return "파일을 업로드해주세요"
-        global transcribe_json_name
-        transcribe_json_name = amazon_transcribe.transcribe_audio(s3_bucket_path)
-        return "음성 변환이 완료되었습니다"
+
+        transcribe_json_name = transcribe.transcribe(s3_bucket_path)
+        response_data = {
+            'transcribe_json_name': transcribe_json_name,
+            'message': '음성 변환이 완료되었습니다'
+        }
+        return json.dumps(response_data), 200, {'Content-Type': 'application/json'}
+
     else:
         return render_template('do_transcribe.html')
 
@@ -84,50 +95,53 @@ def do_transcribe():
 # !-- 3. 화자 분리 전처리 및 출력, 감정 분석 요청 --!
 @app.route('/show_transcribe', methods=['GET', 'POST'])
 def show_transcribe():
-    global detected_start_times # 특정단어 감지시간
-    global s3_bucket_path
-    global transcribe_json_name
-    global dialogue_save # html에 전달되는 대화뭉치
-    global speaker_content
-    global dialogue_only
-    global merged_array
 
+    global output_json
     if request.method == 'POST':
+        s3_bucket_path = request.json.get('s3_bucket_path')
+        transcribe_json_name = request.json.get('transcribe_json_name')
+
         if s3_bucket_path == "":
             return "파일을 업로드해주세요"
         if transcribe_json_name == "":
-            return "파일을 업로드 해주세요"
-
-        # s3 버킷에서 amazon transcribe json 파일 가져오기
-        result_json_file = show_result.get_json_from_s3(transcribe_json_name)
-        json_content = json.load(result_json_file)
+            return "파일을 업로드해주세요"
 
         # 해당 파일 화자분리 및 전처리
-        detected_start_times, dialogue_save, speaker_content, dialogue_only, merged_array = show_result.extract_dialogue(json_content)
+        detected_start_times, dialogue_save, speaker_content, dialogue_only, merged_array = speakerDiarization.speakerDiarization(transcribe_json_name)
         print(merged_array) # 연속된 화자의 발언이 있으면 두 발언을 합치는 배열
         print(dialogue_only) # 내담자의 대화만 저장한 배열
 
-        # Kobert 서버로 POST 요청
-        detected_start_times, dialogue_save, speaker_content, dialogue_only, merged_array = show_result.extract_dialogue(json_content)
-        print(merged_array)
-        print(dialogue_only)
-        #
         # speakers = [item for item in dialogue_save[0]]
         # sentences = [item for item in dialogue_save[1]]
 
-        url = 'http://3.37.179.243:5000/receive_array'
+
+        # Kobert 서버로 POST 요청
+        Koberturl = 'http://3.37.179.243:5000/receive_array'
         headers = {'Content-Type': 'application/json'}
         json_data = json.dumps(dialogue_only)
-        response = requests.post(url, headers=headers, data=json_data)
-        if response.status_code == 200:
-            print('transcribe 전송 성공')
-        else:
-            print('transcribe 전송 실패')
+        response = requests.post(Koberturl, headers=headers, data=json_data)
 
-        print(dialogue_save)
-        print(speaker_content)
-        print(dialogue_only)
-        return render_template('show_transcribe.html', dialogue_save=dialogue_save)
+        # Kobert의 감정분석 결과를 output_json에 저장
+        if response.status_code == 200:
+            print('transcribe to Kobert 전송 성공')
+
+            output_json = json.loads(response.json()['output_json'])
+            sentence_predictions = output_json['predictions']
+            total_percentages = output_json['percentages']
+            print(sentence_predictions)
+            print(total_percentages)
+        else:
+            print('transcribe to Kobert 전송 실패')
+
+
+        response_data = {
+            'detected_start_times': detected_start_times,
+            'dialogue': dialogue_save,
+            'merged_array': merged_array,
+            'sentence_predictions': sentence_predictions,
+            'total_percentages': total_percentages
+        }
+        return json.dumps(response_data), 200, {'Content-Type': 'application/json'}
     else:
         # 'dialogue_save' 변수를 빈 리스트로 초기화하여 반환
         dialogue_save = ([], [])
@@ -139,32 +153,33 @@ def show_transcribe():
 def emotion_recognition():
     global emotion_values
     if request.method == 'POST':
-        global s3_bucket_path
+        s3_bucket_path = request.json.get('s3_bucket_path')
+        detected_start_times = request.json.get('detected_start_times')
         if s3_bucket_path == "":
             return "파일을 업로드해주세요"
 
         s3_key = s3_bucket_path.split('/')[-1]  # 추출된 S3 키
         local_file_path = 'video.mp4'
-
         perform_emotion_recognition.download_file_from_s3(s3_key, local_file_path)
-
         emotion_values = perform_emotion_recognition.perform_emotion_recognition(local_file_path, detected_start_times)
-        print(emotion_values)
-        return render_template('emotion_recognition.html', emotion_values=emotion_values)
+
+        response_data = {
+            'emotion_values': emotion_values
+        }
+        return json.dumps(response_data), 200, {'Content-Type': 'application/json'}
     else:
         return render_template('emotion_recognition.html', emotion_values={})
 
 
-# 텍스트 감정분석 결과 json 파일 얻어오는 경로
-@app.route('/get_json', methods=['GET'])
-def get_json():
-    url = 'http://maind-meeting.shop:5000/show'  # JSON 파일이 있는 URL
-    response = requests.get(url)
-    json_data = response.json()
-    json_data_str = json.dumps(json_data, ensure_ascii = False)
-    print(json_data_str)
-    return json_data_str
-
+# # 텍스트 감정분석 결과 json 파일 얻어오는 경로
+# @app.route('/get_json', methods=['GET'])
+# def get_json():
+#     url = 'http://maind-meeting.shop:5000/show'  # JSON 파일이 있는 URL
+#     response = requests.get(url)
+#     json_data = response.json()
+#     json_data_str = json.dumps(json_data, ensure_ascii = False)
+#     print(json_data_str)
+#     return json_data_str
 
 @app.route("/convey")
 def convey():
