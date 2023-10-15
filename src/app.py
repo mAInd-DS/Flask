@@ -14,6 +14,8 @@ from keras.models import model_from_json
 from keras.utils.image_utils import img_to_array
 import show_result, amazon_transcribe
 import os
+import re
+
 
 # Flask 객체 인스턴스 생성
 app = Flask(__name__)
@@ -32,6 +34,7 @@ detected_start_times = []
 dialogue_save = [[],[]]
 emotion_values = {}
 speaker_content = []
+merged_array = []
 
 @app.route('/')
 def index():
@@ -92,6 +95,8 @@ def show_transcribe():
     global transcribe_json_name
     global dialogue_save
     global speaker_content
+    global dialogue_only
+    global merged_array
 
     if request.method == 'POST':
         if s3_bucket_path == "":
@@ -101,17 +106,23 @@ def show_transcribe():
 
         result_json_file = show_result.get_json_from_s3(transcribe_json_name, aws_access_key_id, aws_secret_access_key, aws_region_name, aws_bucket_name)
         json_content = json.load(result_json_file)
-        detected_start_times, dialogue_save, speaker_content = show_result.extract_dialogue(json_content)
+        detected_start_times, dialogue_save, speaker_content, dialogue_only, merged_array = show_result.extract_dialogue(json_content)
+        print(merged_array)
+        print(dialogue_only)
+        speakers = [item for item in dialogue_save[0]]
+        sentences = [item for item in dialogue_save[1]]
 
-        url = 'http://127.0.0.1:5000/receive_transcribe'
+        url = 'http://3.37.179.243:5000/receive_array'
         headers = {'Content-Type': 'application/json'}
-        response = requests.post(url, headers=headers, json=dialogue_save)
+        json_data = json.dumps(dialogue_only)
+        response = requests.post(url, headers=headers, data=json_data)
         if response.status_code == 200:
             print('transcribe 전송 성공')
         else:
             print('transcribe 전송 실패')
         print(dialogue_save)
         print(speaker_content)
+        print(dialogue_only)
         return render_template('show_transcribe.html', dialogue_save=dialogue_save)
     else:
         # 'dialogue_save' 변수를 빈 리스트로 초기화하여 반환
@@ -155,7 +166,22 @@ def emotion_recognition():
 
 @app.route("/convey")
 def convey():
-    return emotion_values
+    data = {
+        "emotion_values": emotion_values,
+        "merged_array": merged_array
+    }
+    return json.dumps(data)
+
+
+@app.route('/get_json', methods=['GET'])
+def get_json():
+    url = 'http://maind-meeting.shop:5000/show'  # JSON 파일이 있는 URL
+    response = requests.get(url)
+    json_data = response.json()
+    json_data_str = json.dumps(json_data, ensure_ascii = False)
+    print(json_data_str)
+    return json_data_str
+    
 
 if __name__ == "__main__":
     app.run(debug=True)

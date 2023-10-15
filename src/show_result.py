@@ -15,13 +15,15 @@ def get_json_from_s3(transcribe_json_name, aws_access_key, aws_secret_key, regio
     return json_file
 
 def extract_dialogue(json_content):
-    target_words = ["지난주는 어떻게", "오늘 상담을 마치"]
+    target_words = ["지난 주는", "오늘 상담을 마치"]
     segments = json_content['results']['speaker_labels']['segments']
     items = json_content['results']['items']
     dialogue = []
     detected_start_times = []  # 감지된 start time을 저장할 리스트
     dialogue_save = [[],[]]
     speaker_content = []
+    speaker_1_dialogue = []
+    merged_array = []
 
     for segment in segments:
         content_list = []
@@ -51,10 +53,29 @@ def extract_dialogue(json_content):
         dialogue_save[1].append(content)  # 두 번째 하위 배열에 내용 저장
         speaker_content.append([speaker, content])
 
+        merged_array = []
+
+        previous_speaker = None
+
+        for item in speaker_content:
+            speaker = item[0]
+            message = item[1]
+
+            if previous_speaker is None or previous_speaker != speaker:
+                merged_array.append([speaker, message])
+            else:
+                merged_array[-1][1] += ' ' + message
+
+            previous_speaker = speaker
+
+
         for target_word in target_words:
             if target_word in content:
                 print(f"{speaker}이(가) 시작 시간 {start_time}에 '{target_word}' 단어를 감지했습니다.")
                 detected_start_times.append(start_time)  # 감지된 시작 시간을 리스트에 추가
 
+    speaker1_array = [item for item in merged_array if item[0] == 'spk_1']
+    dialogue_only = [item[1] for item in speaker1_array]
+
     print(dialogue_save)
-    return detected_start_times, dialogue_save, speaker_content  # 감지된 start time 리스트 반환
+    return detected_start_times, dialogue_save, speaker_content, dialogue_only, merged_array  # 감지된 start time 리스트 반환
