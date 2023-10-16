@@ -36,6 +36,10 @@ def index():
 @app.route('/file_upload', methods=['GET', 'POST'])
 def file_upload():
     if request.method == 'POST':
+        survey_id_json = request.form.get('survey_id')
+        survey_id_data = json.loads(survey_id_json)
+        survey_id = survey_id_data.get('survey_id')
+
         file = request.files['file']
         filename = secure_filename(file.filename)
 
@@ -50,6 +54,7 @@ def file_upload():
             merged_array, emotion_values, sentence_predictions, total_percentages = diarAndAnalysis(s3_bucket_path, transcribe_json_name)
 
             response_data = {
+                'survey_id': survey_id,
                 'merged_array': merged_array,
                 'emotion_values': emotion_values,
                 'sentence_predictions': sentence_predictions,
