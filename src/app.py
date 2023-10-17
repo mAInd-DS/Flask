@@ -27,18 +27,14 @@ dialogue_only = []
 merged_array = []
 
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-
 # !-- 1. 영상 업로드 --!
 @app.route('/file_upload', methods=['GET', 'POST'])
 def file_upload():
     if request.method == 'POST':
-        survey_id_json = request.form.get('survey_id')
-        survey_id_data = json.loads(survey_id_json)
-        survey_id = survey_id_data.get('survey_id')
+        requestBody_json = request.form.get('requestBody')
+        requestBody_json_data = json.loads(requestBody_json)
+        survey_id = requestBody_json_data.get('survey_id')
+        countNum = requestBody_json_data.get('countNum')
 
         file = request.files['file']
         filename = secure_filename(file.filename)
@@ -56,6 +52,7 @@ def file_upload():
             merged_array, emotion_values, sentence_predictions, total_percentages = diarAndAnalysis(s3_bucket_path, transcribe_json_name)
 
             response_data = {
+                'countNum': countNum,
                 'survey_id': survey_id,
                 'merged_array': merged_array,
                 'emotion_values': emotion_values,
