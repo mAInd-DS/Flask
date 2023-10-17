@@ -50,7 +50,9 @@ def file_upload():
             s3_bucket_path = f"s3://{aws_bucket_name}/{filename}"
             print("bucket path: ", s3_bucket_path)
 
+            # 2. 음성-텍스트 변환
             transcribe_json_name = transcribe(s3_bucket_path)
+            # 3. 화자 분리 전처리 및 출력 - # 4. 텍스트 감정 분석 - # 5. 표정 감정 분석
             merged_array, emotion_values, sentence_predictions, total_percentages = diarAndAnalysis(s3_bucket_path, transcribe_json_name)
 
             response_data = {
@@ -85,32 +87,49 @@ def transcribe(s3_bucket_path):
     return transcribe_json_name
 
 
-# !-- 3. 화자 분리 전처리 및 출력, 텍스트 & 표정 감정 분석  --!
+# !-- 3. 화자 분리 전처리 및 출력, 4. 텍스트 감정 분석 5. 표정 감정 분석  --!
 def diarAndAnalysis(s3_bucket_path, transcribe_json_name):
-    # 1. 화자분리 및 전처리
+    # -- 3. 화자분리 및 전처리 --
     detected_start_times, dialogue_save, speaker_content, dialogue_only, merged_array = speakerDiarization.speakerDiarization(
         transcribe_json_name)
     print(merged_array)  # 연속된 화자의 발언이 있으면 두 발언을 합치는 배열
 
-    # 표정 감정 분석 수행
-    emotion_values = emotion_recognition(s3_bucket_path, detected_start_times)
-
+    # -- 4. 텍스트 감정 분석 --
     # Kobert 서버로 POST 요청
     Koberturl = 'http://3.37.179.243:5000/receive_array'
     headers = {'Content-Type': 'application/json'}
     json_data = json.dumps(dialogue_only)
-    response = requests.post(Koberturl, headers=headers, data=json_data)
 
-    # Kobert의 감정분석 결과를 output_json에 저장
-    if response.status_code == 200:
-        print('transcribe to Kobert 전송 성공')
+    try:
+        response = requests.post(Koberturl, headers=headers, data=json_data)
+        response.raise_for_status()  # 요청이 성공적으로 이루어지지 않으면 예외 발생
         output_json = json.loads(response.json()['output_json'])
         sentence_predictions = output_json['predictions']
         total_percentages = output_json['percentages']
-        print(sentence_predictions)
-        print(total_percentages)
-    else:
+        print('transcribe to Kobert 전송 성공')
+    except requests.exceptions.RequestException as e:
+        # kobert 서버로 전송되지 않은 경우 None값 전달
+        total_percentages = None
+        sentence_predictions = None
         print('transcribe to Kobert 전송 실패')
+
+
+    # response = requests.post(Koberturl, headers=headers, data=json_data)
+    #
+    # # Kobert의 감정분석 결과를 output_json에 저장
+    # if response.status_code == 200:
+    #     print('transcribe to Kobert 전송 성공')
+    #     output_json = json.loads(response.json()['output_json'])
+    #     sentence_predictions = output_json['predictions']
+    #     total_percentages = output_json['percentages']
+    #     print(sentence_predictions)
+    #     print(total_percentages)
+    # else:
+    #     print('transcribe to Kobert 전송 실패')
+
+
+    # -- 5. 표정 감정 분석 수행 --
+    emotion_values = emotion_recognition(s3_bucket_path, detected_start_times)
 
     return merged_array, emotion_values, sentence_predictions, total_percentages
 
